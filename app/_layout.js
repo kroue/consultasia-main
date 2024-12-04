@@ -13,6 +13,7 @@ const RootLayout = () => {
         <SafeAreaProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="dashboard"/>
           </Stack>
         </SafeAreaProvider>
       </PaperProvider>
