@@ -1,90 +1,115 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
 import styles from '../styles/styles';
+import { IconButton } from 'react-native-paper'; // Add this import for the icon button
+import { useRouter } from 'expo-router';
+import axios from 'axios';
+
 
 const Login = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [registerDrawerVisible, setRegisterDrawerVisible] = useState(false); // State for the register drawer
+  const [registerDrawerVisible, setRegisterDrawerVisible] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [bio, setBio] = useState('');
   const [pronouns, setPronouns] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
+  const router = useRouter(" ");
 
-  const slideAnim = new Animated.Value(0); // Initial position of drawer
-  const logoAnim = new Animated.Value(1); // Logo size animation value
-  const logoTranslateY = new Animated.Value(0); // Logo translation Y (vertical position)
+  function handleSubmit() {
+    // Ensure all required fields are filled
+    if (!username || !password || !name || !address || !bio || !pronouns) {
+      console.error('All fields are required');
+      return;
+    }
+  
+    const userData = {
+      username: username,
+      password: password,
+      fullname: name, // Fixed: Use `name` instead of `fullname`
+      address: address,
+      bio: bio,
+      pronouns: pronouns,
+    };
+  
+    // Make the API request
+    axios.post("http://192.168.1.4:5001/register", userData)
+      .then((res) => {
+        console.log('Registration successful:', res.data);
+      })
+      .catch((e) => {
+        console.error('Registration failed:', e.message || e);
+      });
+      router.push('dashboard')
+  }
+
+  const slideAnim = new Animated.Value(0);
+  const logoAnim = new Animated.Value(1);
+  const logoTranslateY = new Animated.Value(0);
 
   useEffect(() => {
-    // Opening and closing the drawer with animation when the drawer visibility changes
     Animated.timing(slideAnim, {
       toValue: drawerVisible || registerDrawerVisible ? 1 : 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
 
-    // Animate logo size and position based on register drawer visibility
     Animated.timing(logoAnim, {
-      toValue: registerDrawerVisible ? 0.7 : 1, // Reduce logo size when register drawer is visible
+      toValue: registerDrawerVisible ? 0.7 : 1,
       duration: 300,
       useNativeDriver: true,
     }).start();
 
-    // Move the logo upward when the register drawer is visible
     Animated.timing(logoTranslateY, {
-      toValue: registerDrawerVisible ? -150 : 0, // Move the logo up when register drawer is visible
+      toValue: registerDrawerVisible ? -150 : 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
   }, [drawerVisible, registerDrawerVisible]);
 
-  const toggleDrawer = () => {
-    setDrawerVisible(!drawerVisible);
-  };
+  const toggleDrawer = () => setDrawerVisible(!drawerVisible);
 
-  const toggleRegisterDrawer = () => {
-    setRegisterDrawerVisible(!registerDrawerVisible);
-  };
+  const toggleRegisterDrawer = () => setRegisterDrawerVisible(!registerDrawerVisible);
 
   const handleLogin = () => {
     console.log('Logging in with:', username, password);
+    // After login logic, navigate to the dashboard
+    router.push('/dashboard');  // Navigate to the 'dashboard' page
   };
+
 
   const handleRegister = () => {
     console.log('Registering with:', username, password, name, address, bio, pronouns);
   };
 
-  // Handle the swipe down gesture to close the drawer
   const onGestureEvent = Animated.event(
     [{ nativeEvent: { translationY: slideAnim } }],
     { useNativeDriver: false }
   );
 
   const onHandlerStateChange = (event) => {
-    // Close the drawer if swipe down is significant (translationY > 100)
     if (event.nativeEvent.translationY > 100) {
-      setDrawerVisible(false); // Close login drawer
-      setRegisterDrawerVisible(false); // Close register drawer
+      setDrawerVisible(false);
+      setRegisterDrawerVisible(false);
     }
   };
 
-  // Reset the drawer to login and logo animations when clicking 'Already have an account?'
   const handleSwitchToLogin = () => {
-    setRegisterDrawerVisible(false); // Close the register drawer
-    setDrawerVisible(true); // Open the login drawer
+    setRegisterDrawerVisible(false);
+    setDrawerVisible(true);
 
-    // Reset the logo animation to normal size and position
     Animated.timing(logoAnim, {
-      toValue: 1, // Reset logo size
+      toValue: 1,
       duration: 300,
       useNativeDriver: true,
     }).start();
 
     Animated.timing(logoTranslateY, {
-      toValue: 0, // Reset logo position
+      toValue: 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -96,12 +121,15 @@ const Login = () => {
         <View style={styles.section}>
           <Animated.Image
             source={require('../assets/logo.png')}
-            style={[styles.logo, {
-              transform: [
-                { scale: logoAnim }, // Apply the logo scale animation here
-                { translateY: logoTranslateY }, // Apply the vertical move (translation) animation here
-              ]
-            }]}
+            style={[
+              styles.logo,
+              {
+                transform: [
+                  { scale: logoAnim },
+                  { translateY: logoTranslateY },
+                ],
+              },
+            ]}
           />
         </View>
 
@@ -119,20 +147,23 @@ const Login = () => {
         {drawerVisible && (
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange} // Handle swipe down to close the drawer
+            onHandlerStateChange={onHandlerStateChange}
           >
             <Animated.View
-              style={[styles.drawerContainer, {
-                height: '57%',
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [300, 0], // Slide down effect for login drawer
-                    })
-                  },
-                ],
-              }]}
+              style={[
+                styles.drawerContainer,
+                {
+                  height: '57%',
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [300, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
             >
               <View style={styles.drawerContent}>
                 <TextInput
@@ -157,7 +188,7 @@ const Login = () => {
                   onChangeText={setPassword}
                   style={[styles.input, { backgroundColor: 'white' }]}
                   mode="outlined"
-                  secureTextEntry
+                  secureTextEntry={!showPassword} // Toggle visibility based on the showPassword state
                   theme={{
                     colors: {
                       primary: 'black',
@@ -167,15 +198,19 @@ const Login = () => {
                       underlineColor: 'transparent',
                     },
                   }}
+                  right={
+                    <TextInput.Icon
+                      name={showPassword ? 'eye-off' : 'eye'} // Toggle between eye and eye-off icon
+                      onPress={() => setShowPassword(!showPassword)} // Toggle the showPassword state
+                    />
+                  }
                 />
 
                 <TouchableOpacity
                   onPress={toggleRegisterDrawer}
                   style={styles.dontHaveAccount}
                 >
-                  <Text style={styles.dontHaveAccountText}>
-                    Don't have an account?
-                  </Text>
+                  <Text style={styles.dontHaveAccountText}>Don't have an account?</Text>
                 </TouchableOpacity>
 
                 <Button
@@ -186,6 +221,7 @@ const Login = () => {
                 >
                   Sign-in
                 </Button>
+
 
                 <Text style={styles.termsText}>
                   By clicking sign-in, you are agreeing to our{' '}
@@ -207,133 +243,43 @@ const Login = () => {
           </PanGestureHandler>
         )}
 
-        {/* Register Drawer */}
         {registerDrawerVisible && (
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange} // Handle swipe down to close the drawer
+            onHandlerStateChange={onHandlerStateChange}
           >
             <Animated.View
-              style={[styles.drawerContainer, {
-                height: '75%',
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [400, 0], // Slide down effect for register drawer
-                    })
-                  },
-                ],
-              }]}
+              style={[
+                styles.drawerContainer,
+                {
+                  height: '75%',
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [400, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
             >
               <View style={styles.drawerContent}>
-                <TextInput
-                  label="Username"
-                  value={username}
-                  onChangeText={setUsername}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  secureTextEntry
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Name"
-                  value={name}
-                  onChangeText={setName}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Address"
-                  value={address}
-                  onChangeText={setAddress}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Bio"
-                  value={bio}
-                  onChangeText={setBio}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Pronouns"
-                  value={pronouns}
-                  onChangeText={setPronouns}
-                  style={[styles.input, { backgroundColor: 'white', marginTop: 10, marginBottom: 8 }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
+                {/* Register Inputs */}
+                <TextInput label="Username" value={username} onChangeText={setUsername} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
+                <TextInput label="Password" value={password} onChangeText={setPassword} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" secureTextEntry />
+                <TextInput label="Name" value={name} onChangeText={setName} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
+                <TextInput label="Address" value={address} onChangeText={setAddress} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
+                <TextInput label="Bio" value={bio} onChangeText={setBio} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
+                <TextInput label="Pronouns" value={pronouns} onChangeText={setPronouns} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
 
                 <TouchableOpacity onPress={handleSwitchToLogin}>
-                  <Text style={styles.dontHaveAccountText}>
-                    Already have an account? Sign In
-                  </Text>
+                  <Text style={styles.dontHaveAccountText}>Already have an account? Sign In</Text>
                 </TouchableOpacity>
 
                 <Button
                   mode="contained"
-                  onPress={handleRegister}
+                  onPress={handleSubmit}
                   style={styles.loginButton}
                   labelStyle={styles.loginButtonText}
                 >

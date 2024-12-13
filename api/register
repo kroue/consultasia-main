@@ -1,0 +1,36 @@
+// Register User
+app.post('/api/register', async (req, res) => {
+  const { username, password, name, address, bio, pronouns } = req.body;
+
+  // Check if the user already exists
+  const userExists = await User.findOne({ username });
+  if (userExists) {
+    return res.status(400).json({ message: 'User already exists' });
+  }
+
+  try {
+    const user = new User({
+      username,
+      password,
+      name,
+      address,
+      bio,
+      pronouns,
+    });
+
+    await user.save();
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: {
+        username: user.username,
+        name: user.name,
+        address: user.address,
+        bio: user.bio,
+        pronouns: user.pronouns,
+      },
+    });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ message: 'Error registering user' });
+  }
+});
