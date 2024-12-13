@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     elevation: 5, // Elevation for Android shadow
   },
   dashboardText: {
-    fontSize: 24,
+    fontSize: 35,
     marginBottom: 20, // Space between text and button
     color: '#333',
   },
@@ -480,6 +480,13 @@ supportLink: {
   color: '#007bff', // Blue color for clickable links
   textDecorationLine: 'underline',
 },
+dashboardLogo:{
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginTop: 0,
+}
 });
 
 export default styles;

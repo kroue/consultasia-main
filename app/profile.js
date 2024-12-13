@@ -1,40 +1,70 @@
-import React, {useEffect, useState} from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Button } from 'react-native-paper'; // Import Button from React Native Paper
-import { useNavigation, useRoute } from '@react-navigation/native'; // Navigation hook for go back functionality
-import styles from '../styles/styles'; // Import existing styles
-import {Ionicons} from 'react-native-vector-icons';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Button } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // For storing/retrieving the token
+import styles from '../styles/styles';
 
 const Profile = () => {
-  const navigation = useNavigation(); // Hook for navigation
-  const route = useRoute(); // Hook to get passed params (updated user data)
+  const navigation = useNavigation();
+  const [userData, setUserData] = useState(null); // Initially null to indicate loading
+  const [loading, setLoading] = useState(true); // Loading state
 
-
-  // Static user data (this can be replaced with dynamic data from your API or database)
-  const [userData, setUserData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    address: '1234 Main Street, City, Country',
-    pronoun: 'He/Him',
-    bio: 'Lorem ipsum dolor sit amet...',
-  });
-  const user = {
-    profilePicture: require('../assets/profile_picture.jpg') // Update with actual image path
-  };
-  const handleEditProfile = () => {
-    // Navigate to the Edit Profile page (you can update this to the actual page you want to navigate to)
-    console.log('Edit Profile Clicked');
-    navigation.navigate('editProfile');
-    // navigation.navigate('EditProfile');
-  };
   useEffect(() => {
-    if (route.params?.updatedData) {
-      setUserData(route.params.updatedData);
-    }
-  }, [route.params?.updatedData]);
+    const fetchUserProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token'); // Get token from storage
+        if (!token) {
+          console.error('Token not found, redirecting to login.');
+          navigation.navigate('dashboard');
+          return;
+        }
+
+        const response = await axios.get('http://192.168.1.4:5001/get-profile', {
+          headers: { Authorization: `Bearer ${token}` }, // Send token in the header
+        });
+
+        setUserData(response.data.data); // Update user data with `data` field
+      } catch (error) {
+        console.error('Error fetching user profile:', error.message || error);
+        // Handle token expiration or invalid token
+        navigation.navigate('login');
+      } finally {
+        setLoading(false); // Stop loading indicator
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigation]);
+
+  const handleEditProfile = () => {
+    navigation.navigate('editProfile', { userData }); // Pass current user data to the edit profile page
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text>Loading Profile...</Text>
+      </View>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text>Error loading profile. Please try again.</Text>
+        <Button mode="contained" onPress={() => navigation.navigate('login')}>
+          Go to Login
+        </Button>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.profilePage}>
-      {/* Go Back Button */}
       <Button
         mode="contained"
         onPress={() => navigation.navigate('dashboard')}
@@ -44,42 +74,33 @@ const Profile = () => {
         Go Back
       </Button>
 
-      {/* Profile Picture */}
       <View>
-        <Image source={user.profilePicture} style={styles.profileImage} />
+        <Image
+          source={
+            userData.profilePicture
+              ? { uri: userData.profilePicture } // Use profile picture from the server
+              : require('../assets/profile_picture.jpg') // Fallback to a default picture
+          }
+          style={styles.profileImage}
+        />
       </View>
-       {/* Edit Profile Button */}
-       <TouchableOpacity
-        onPress={handleEditProfile}
-        style={styles.editProfileButton}
-      >
+
+      <TouchableOpacity onPress={handleEditProfile} style={styles.editProfileButton}>
         <Text style={styles.editProfileText}>Edit Profile</Text>
         <Ionicons name="pencil" size={20} color="white" style={styles.editProfileIcon} />
       </TouchableOpacity>
 
-     {/* Bio */}
-     <View style={styles.profileItemContainer}>
-        <Text style={styles.profileBio}>{userData.bio}</Text>
-      </View>
-
-      {/* Name */}
       <View style={styles.profileItemContainer}>
-        <Text style={styles.profileName}>{userData.name}</Text>
+        <Text style={styles.profileInfo}>{userData.bio}</Text>
       </View>
-
-      {/* Email */}
       <View style={styles.profileItemContainer}>
-        <Text style={styles.profileInfo}>{userData.email}</Text>
+        <Text style={styles.profileName}>{userData.username}</Text>
       </View>
-
-      {/* Address */}
       <View style={styles.profileItemContainer}>
         <Text style={styles.profileInfo}>{userData.address}</Text>
       </View>
-
-      {/* Pronoun */}
       <View style={styles.profileItemContainer}>
-        <Text style={styles.profileInfo}>{userData.pronoun}</Text>
+        <Text style={styles.profileInfo}>{userData.pronouns}</Text>
       </View>
     </View>
   );

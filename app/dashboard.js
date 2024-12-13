@@ -1,56 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import { Drawer } from 'react-native-paper';
 import { BlurView } from 'expo-blur'; // Importing BlurView for the blur effect
 import styles from '../styles/styles';
 import { Button } from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'; // Import useRouter to retrieve query parameters
 
 const Dashboard = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const router = useRouter();
+  const [result, setResult] = useState(null);
+
+  // Ensure that query parameters are available
+  useEffect(() => {
+    console.log("Router query:", router.query); // Log the query to check if result is passed
+    if (router.query && router.query.result) {
+      setResult(router.query.result); // Set the result from the query
+    }
+  }, [router.query]);
 
   const handleImageButtonPress = () => {
     setDrawerVisible(!drawerVisible);
   };
 
   const handleLogout = () => {
-    // Show confirmation alert before logging out
     Alert.alert(
       'Confirm Logout',
       'Are you sure you want to log out?',
       [
         {
-          text: 'No', // Button to cancel logout
+          text: 'No',
           onPress: () => console.log('Logout canceled'),
           style: 'cancel',
         },
         {
-          text: 'Yes', // Button to confirm logout
+          text: 'Yes',
           onPress: () => {
             router.push('/'); // Navigate to home or login page
           },
         },
       ],
-      { cancelable: false } // Prevent closing the alert by tapping outside
+      { cancelable: false }
     );
   };
 
   const handleConsultation = () => {
     router.push('/course');
   };
+
   const handleProfile = () => {
     router.push('/profile');
-  }
+  };
+
   const handleAboutUs = () => {
     router.push('/aboutus');
-  }
-  const handeContactUs = () => {
+  };
+
+  const handleContactUs = () => {
     router.push('/contactus');
-  }
+  };
+
   const handleSupport = () => {
     router.push('/support');
-  }
+  };
+
   return (
     <View style={styles.dashboardPage}>
       {/* Blur effect when drawer is visible */}
@@ -65,28 +78,12 @@ const Dashboard = () => {
       {/* Drawer menu */}
       {drawerVisible && (
         <View style={[styles.drawerDashboardContainer, { backgroundColor: '#fffcd7' }]}>
-          {/* Wrapping all label text inside <Text> */}
           <Drawer.Section style={styles.drawerSection}>
-            <Drawer.Item
-              label={<Text>Profile</Text>}
-              onPress={handleProfile}
-            />
-            <Drawer.Item
-              label={<Text>About Us</Text>}
-              onPress={handleAboutUs}
-            />
-            <Drawer.Item
-              label={<Text>Contact Us</Text>}
-              onPress={handeContactUs}
-            />
-            <Drawer.Item
-              label={<Text>Support</Text>}
-              onPress={handleSupport}
-            />
-            <Drawer.Item
-              label={<Text>Logout</Text>}
-              onPress={handleLogout}
-            />
+            <Drawer.Item label={<Text>Profile</Text>} onPress={handleProfile} />
+            <Drawer.Item label={<Text>About Us</Text>} onPress={handleAboutUs} />
+            <Drawer.Item label={<Text>Contact Us</Text>} onPress={handleContactUs} />
+            <Drawer.Item label={<Text>Support</Text>} onPress={handleSupport} />
+            <Drawer.Item label={<Text>Logout</Text>} onPress={handleLogout} />
           </Drawer.Section>
         </View>
       )}
@@ -104,18 +101,19 @@ const Dashboard = () => {
 
       {/* Dashboard content */}
       <View style={styles.dashboardContainer}>
-        {/* Ensuring all static text is wrapped in <Text> */}
-        <Text style={styles.dashboardText}>Welcome to the Dashboard</Text>
+      <Image
+            source={require('../assets/logo.png')}
+            style={[
+              styles.dashboardLogo,]}/>
       </View>
 
-      {/* Button for consultation */}
+      {/* Consultation Button */}
       <Button
         mode="contained"
         onPress={handleConsultation}
         style={[styles.consultationButton, { marginTop: 40 }]}
         labelStyle={{ color: 'black', fontSize: 20, textAlign: 'center' }}
       >
-        {/* Wrapping button text inside <Text> */}
         <Text>Take a Consultation</Text>
       </Button>
     </View>

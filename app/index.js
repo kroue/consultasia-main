@@ -6,6 +6,11 @@ import styles from '../styles/styles';
 import { IconButton } from 'react-native-paper'; // Add this import for the icon button
 import { useRouter } from 'expo-router';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
+import { Navigator } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+
 
 
 const Login = () => {
@@ -19,6 +24,8 @@ const Login = () => {
   const [pronouns, setPronouns] = useState('');
   const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
   const router = useRouter(" ");
+  const [loading, setLoading] = useState(false)
+  const navigation = useNavigation();
 
   function handleSubmit() {
     // Ensure all required fields are filled
@@ -26,7 +33,7 @@ const Login = () => {
       console.error('All fields are required');
       return;
     }
-  
+
     const userData = {
       username: username,
       password: password,
@@ -35,16 +42,19 @@ const Login = () => {
       bio: bio,
       pronouns: pronouns,
     };
-  
+
     // Make the API request
     axios.post("http://192.168.1.4:5001/register", userData)
       .then((res) => {
         console.log('Registration successful:', res.data);
+        // Show success alert
+        window.alert('Successfully registered');
+        // Navigate to dashboard
+        router.push('dashboard');
       })
       .catch((e) => {
         console.error('Registration failed:', e.message || e);
       });
-      router.push('dashboard')
   }
 
   const slideAnim = new Animated.Value(0);
@@ -75,11 +85,39 @@ const Login = () => {
 
   const toggleRegisterDrawer = () => setRegisterDrawerVisible(!registerDrawerVisible);
 
-  const handleLogin = () => {
-    console.log('Logging in with:', username, password);
-    // After login logic, navigate to the dashboard
-    router.push('/dashboard');  // Navigate to the 'dashboard' page
+  const handleLogin = async () => {
+    try {
+      console.log("Logging in with:", username, password);
+
+      setLoading(true); // Show loading indicator
+      const userData = { username, password };
+
+      const response = await axios.post("http://192.168.1.4:5001/login-user", userData);
+
+      if (response.data.status === "ok") {
+        const token = response.data.data; // Assuming `data` contains the token
+        console.log("Login successful. Token:", token);
+
+        // Save the token to AsyncStorage
+        await AsyncStorage.setItem("token", token);
+        console.log("Token saved to AsyncStorage.");
+
+        Alert.alert("Success", "Login successful!");
+
+        // Navigate to the Dashboard screen
+        navigation.navigate("dashboard");
+      } else {
+        console.error("Login failed:", response.data.data);
+        Alert.alert("Error", response.data.data || "Login failed!");
+      }
+    } catch (error) {
+      console.error("Error during login:", error.response?.data || error.message);
+      Alert.alert("Error", error.response?.data?.data || "An error occurred during login!");
+    } finally {
+      setLoading(false); // Hide loading indicator
+    }
   };
+
 
 
   const handleRegister = () => {
