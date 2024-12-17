@@ -253,7 +253,7 @@ const Login = () => {
 
                 <Button
                   mode="contained"
-                  onPress={handleLogin}
+                  onPress={router.push('dashboard')}
                   style={styles.loginButton}
                   labelStyle={styles.loginButtonText}
                 >
@@ -317,7 +317,7 @@ const Login = () => {
 
                 <Button
                   mode="contained"
-                  onPress={handleSubmit}
+                  onPress ={handleSubmit}
                   style={styles.loginButton}
                   labelStyle={styles.loginButtonText}
                 >
