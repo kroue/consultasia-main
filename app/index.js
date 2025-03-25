@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, TouchableOpacity, Alert } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
 import styles from '../styles/styles';
-import { IconButton } from 'react-native-paper'; // Add this import for the icon button
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
-import { Navigator } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
+const API_BASE_URL = "http://192.168.1.19:8000/api";  // Use Django's port 8000
 
 
 const Login = () => {
@@ -19,313 +17,108 @@ const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [emailAddress, setEmailAddress] = useState('');
   const [bio, setBio] = useState('');
   const [pronouns, setPronouns] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
-  const router = useRouter(" ");
-  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
   const navigation = useNavigation();
 
-  function handleSubmit() {
-    // Ensure all required fields are filled
-    if (!username || !password || !name || !address || !bio || !pronouns) {
-      console.error('All fields are required');
+  const handleRegister = async () => {
+    if (!username || !password || !name || !emailAddress || !bio || !pronouns) {
+      Alert.alert("Error", "All fields are required");
       return;
     }
-
-    const userData = {
-      username: username,
-      password: password,
-      fullname: name, // Fixed: Use `name` instead of `fullname`
-      address: address,
-      bio: bio,
-      pronouns: pronouns,
-    };
-
-    // Make the API request
-    axios.post("http://192.168.1.4:5001/register", userData)
-      .then((res) => {
-        console.log('Registration successful:', res.data);
-        // Show success alert
-        window.alert('Successfully registered');
-        // Navigate to dashboard
-        router.push('dashboard');
-      })
-      .catch((e) => {
-        console.error('Registration failed:', e.message || e);
-      });
-  }
-
-  const slideAnim = new Animated.Value(0);
-  const logoAnim = new Animated.Value(1);
-  const logoTranslateY = new Animated.Value(0);
-
-  useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: drawerVisible || registerDrawerVisible ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    Animated.timing(logoAnim, {
-      toValue: registerDrawerVisible ? 0.7 : 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    Animated.timing(logoTranslateY, {
-      toValue: registerDrawerVisible ? -150 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [drawerVisible, registerDrawerVisible]);
-
-  const toggleDrawer = () => setDrawerVisible(!drawerVisible);
-
-  const toggleRegisterDrawer = () => setRegisterDrawerVisible(!registerDrawerVisible);
-
-  const handleLogin = async () => {
+  
+    const userData = { username, password, name, email_address: emailAddress, bio, pronouns };
+  
     try {
-      console.log("Logging in with:", username, password);
-
-      setLoading(true); // Show loading indicator
-      const userData = { username, password };
-
-      const response = await axios.post("http://192.168.1.4:5001/login-user", userData);
-
-      if (response.data.status === "ok") {
-        const token = response.data.data; // Assuming `data` contains the token
-        console.log("Login successful. Token:", token);
-
-        // Save the token to AsyncStorage
+      const response = await axios.post(`${API_BASE_URL}/register/`, userData);
+      console.log("Registration Success:", response.data);  // ✅ Debugging line
+      Alert.alert("Success", "Registration successful");
+    } catch (error) {
+      console.log("Registration Error:", error.response?.data || error.message);  // ✅ Debugging line
+      Alert.alert("Error", error.response?.data?.error || "Registration failed");
+    }
+  };
+  
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert("Error", "Username and password are required");
+      return;
+    }
+  
+    try {
+      const response = await axios.post(`${API_BASE_URL}/login/`, { username, password });
+  
+      console.log("Full Response:", response);  // ✅ Log full response
+  
+      if (response.status === 200 && response.data?.token) {
+        const token = response.data.token;
         await AsyncStorage.setItem("token", token);
-        console.log("Token saved to AsyncStorage.");
-
-        Alert.alert("Success", "Login successful!");
-
-        // Navigate to the Dashboard screen
-        navigation.navigate("dashboard");
+        
+        Alert.alert("Success", "Login successful");
+        router.push("dashboard");  // ✅ Redirect to dashboard
       } else {
-        console.error("Login failed:", response.data.data);
-        Alert.alert("Error", response.data.data || "Login failed!");
+        Alert.alert("Error", "Unexpected response from server");
       }
     } catch (error) {
-      console.error("Error during login:", error.response?.data || error.message);
-      Alert.alert("Error", error.response?.data?.data || "An error occurred during login!");
-    } finally {
-      setLoading(false); // Hide loading indicator
+      console.log("Login Error:", error.response?.data || error.message);  // ✅ Log full error
+      Alert.alert("Error", error.response?.data?.error || "Login failed");
     }
   };
-
-
-
-  const handleRegister = () => {
-    console.log('Registering with:', username, password, name, address, bio, pronouns);
-  };
-
-  const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationY: slideAnim } }],
-    { useNativeDriver: false }
-  );
-
-  const onHandlerStateChange = (event) => {
-    if (event.nativeEvent.translationY > 100) {
-      setDrawerVisible(false);
-      setRegisterDrawerVisible(false);
-    }
-  };
-
-  const handleSwitchToLogin = () => {
-    setRegisterDrawerVisible(false);
-    setDrawerVisible(true);
-
-    Animated.timing(logoAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    Animated.timing(logoTranslateY, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
+  
+  
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.page}>
         <View style={styles.section}>
-          <Animated.Image
-            source={require('../assets/logo.png')}
-            style={[
-              styles.logo,
-              {
-                transform: [
-                  { scale: logoAnim },
-                  { translateY: logoTranslateY },
-                ],
-              },
-            ]}
-          />
+          <Animated.Image source={require('../assets/logo.png')} style={styles.logo} />
         </View>
 
         <View style={styles.section}>
-          <Button
-            mode="contained"
-            onPress={toggleDrawer}
-            style={styles.button}
-            labelStyle={styles.buttonLabel}
-          >
+          <Button mode="contained" onPress={() => setDrawerVisible(true)} style={styles.button}>
             Get Started
           </Button>
         </View>
 
         {drawerVisible && (
-          <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-          >
-            <Animated.View
-              style={[
-                styles.drawerContainer,
-                {
-                  height: '57%',
-                  transform: [
-                    {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [300, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.drawerContent}>
-                <TextInput
-                  label="Username"
-                  value={username}
-                  onChangeText={setUsername}
-                  style={[styles.input, { backgroundColor: 'white' }]}
-                  mode="outlined"
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                />
-                <TextInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  style={[styles.input, { backgroundColor: 'white' }]}
-                  mode="outlined"
-                  secureTextEntry={!showPassword} // Toggle visibility based on the showPassword state
-                  theme={{
-                    colors: {
-                      primary: 'black',
-                      placeholder: '#999',
-                      text: 'black',
-                      background: 'white',
-                      underlineColor: 'transparent',
-                    },
-                  }}
-                  right={
-                    <TextInput.Icon
-                      name={showPassword ? 'eye-off' : 'eye'} // Toggle between eye and eye-off icon
-                      onPress={() => setShowPassword(!showPassword)} // Toggle the showPassword state
-                    />
-                  }
-                />
-
-                <TouchableOpacity
-                  onPress={toggleRegisterDrawer}
-                  style={styles.dontHaveAccount}
-                >
-                  <Text style={styles.dontHaveAccountText}>Don't have an account?</Text>
-                </TouchableOpacity>
-
-                <Button
-                  mode="contained"
-                  onPress={router.push('dashboard')}
-                  style={styles.loginButton}
-                  labelStyle={styles.loginButtonText}
-                >
-                  Sign-in
-                </Button>
-
-
-                <Text style={styles.termsText}>
-                  By clicking sign-in, you are agreeing to our{' '}
-                  <Text style={styles.linkText}>Terms of Service</Text> and{' '}
-                  <Text style={styles.linkText}>Privacy Policy</Text>.
-                </Text>
-                <Text style={styles.orText}>or</Text>
-
-                <Button
-                  icon="google"
-                  mode="contained"
-                  style={styles.googleButton}
-                  onPress={() => console.log('Google Sign-in')}
-                >
-                  Sign-in with Google account
-                </Button>
-              </View>
-            </Animated.View>
-          </PanGestureHandler>
+          <Animated.View style={styles.drawerContainer}>
+            <View style={styles.drawerContent}>
+              <TextInput label="Username" value={username} onChangeText={setUsername} style={styles.input} />
+              <TextInput label="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry={!showPassword} />
+              <Button mode="contained" onPress={handleLogin} style={styles.loginButton} disabled={loading}>
+                Sign-in
+              </Button>
+              <TouchableOpacity onPress={() => setRegisterDrawerVisible(true)}>
+                <Text>Don't have an account? Register</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         )}
 
         {registerDrawerVisible && (
-          <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-          >
-            <Animated.View
-              style={[
-                styles.drawerContainer,
-                {
-                  height: '75%',
-                  transform: [
-                    {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [400, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.drawerContent}>
-                {/* Register Inputs */}
-                <TextInput label="Username" value={username} onChangeText={setUsername} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
-                <TextInput label="Password" value={password} onChangeText={setPassword} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" secureTextEntry />
-                <TextInput label="Name" value={name} onChangeText={setName} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
-                <TextInput label="Address" value={address} onChangeText={setAddress} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
-                <TextInput label="Bio" value={bio} onChangeText={setBio} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
-                <TextInput label="Pronouns" value={pronouns} onChangeText={setPronouns} style={[styles.input, { backgroundColor: 'white' }]} mode="outlined" />
+          <Animated.View style={styles.drawerContainer}>
+            <View style={styles.drawerContent}>
+              <TextInput label="Username" value={username} onChangeText={setUsername} style={styles.input} />
+              <TextInput label="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry />
+              <TextInput label="Name" value={name} onChangeText={setName} style={styles.input} />
+              <TextInput label="Email Address" value={emailAddress} onChangeText={setEmailAddress} style={styles.input} />
+              <TextInput label="Bio" value={bio} onChangeText={setBio} style={styles.input} />
+              <TextInput label="Pronouns" value={pronouns} onChangeText={setPronouns} style={styles.input} />
 
-                <TouchableOpacity onPress={handleSwitchToLogin}>
-                  <Text style={styles.dontHaveAccountText}>Already have an account? Sign In</Text>
-                </TouchableOpacity>
+              <TouchableOpacity onPress={() => setRegisterDrawerVisible(false)}>
+                <Text>Already have an account? Sign In</Text>
+              </TouchableOpacity>
 
-                <Button
-                  mode="contained"
-                  onPress ={handleSubmit}
-                  style={styles.loginButton}
-                  labelStyle={styles.loginButtonText}
-                >
-                  Register
-                </Button>
-              </View>
-            </Animated.View>
-          </PanGestureHandler>
+              <Button mode="contained" onPress={handleRegister} style={styles.loginButton}>
+                Register
+              </Button>
+            </View>
+          </Animated.View>
         )}
       </View>
     </GestureHandlerRootView>
